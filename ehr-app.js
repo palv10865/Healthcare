@@ -340,7 +340,7 @@ noteDialog.addEventListener("click", (event) => {
 
 const manifestLink = document.querySelector('link[rel="manifest"]');
 if (manifestLink && "serviceWorker" in navigator) {
-  const appRoot = new URL("./", manifestLink.href);
+  const appRoot = new URL(import.meta.env.BASE_URL, window.location.href);
   window.addEventListener("load", () => {
     navigator.serviceWorker.register(new URL("service-worker.js", appRoot)).catch(() => {});
   });
