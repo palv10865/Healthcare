@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" class="theme-botanical">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -16,7 +16,7 @@
   <body>
     <div class="ehr-shell">
       <aside class="rail">
-        <a class="brand" href="./" aria-label="Wellnest Clinical home"><span class="brand-mark">W</span><span>wellnest<span class="brand-dot">.</span><small>CLINICAL</small></span></a>
+        <a class="brand" href="./" aria-label="Wellnest Clinical home"><span class="brand-mark" aria-hidden="true"><span class="brand-leaf"></span></span><span>wellnest<span class="brand-dot">.</span><small>CLINICAL</small></span></a>
         <div class="facility-switch"><span class="facility-symbol">N</span><span><strong>Northline Medical</strong><small>Central campus</small></span><span class="switch-chevron">⌄</span></div>
         <p class="rail-label">CLINICAL WORKSPACE</p>
         <nav class="main-nav" aria-label="Clinical workspace">
@@ -36,6 +36,7 @@
           <div class="crumb"><span>Northline Medical</span><b>/</b><strong id="page-context">Overview</strong></div>
           <div class="topbar-actions">
             <div class="global-search-wrap"><label class="global-search"><span>⌕</span><input id="global-search" type="search" placeholder="Find patient by name or MRN" autocomplete="off" aria-label="Find patient by name or medical record number" aria-expanded="false" aria-controls="search-results" /><kbd>⌘ K</kbd></label><div class="search-results hidden" id="search-results" role="listbox"></div></div>
+            <button class="theme-toggle" id="theme-toggle" type="button" aria-pressed="true" aria-label="Switch to classic theme"><span class="theme-leaf" aria-hidden="true">✿</span><span id="theme-toggle-label">Botanical</span></button>
             <span class="environment-pill"><i></i> DEMO DATA</span>
             <button class="top-icon" aria-label="Notifications" title="Notifications">♧<span></span></button>
             <button class="top-avatar" aria-label="Signed in as Dr. Alex Parker">AP</button>
@@ -56,6 +57,26 @@
       </form>
     </dialog>
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+    <button class="assistant-launch" id="assistant-launch" type="button" aria-controls="assistant-panel" aria-expanded="false">
+      <span class="assistant-launch-leaf" aria-hidden="true">✿</span><span>Clinical chat</span>
+    </button>
+    <aside class="assistant-panel hidden" id="assistant-panel" aria-label="Multilingual clinical assistant" aria-hidden="true">
+      <header class="assistant-header">
+        <div class="assistant-identity"><span class="assistant-mark" aria-hidden="true">✿</span><div><p>WELLNEST / ASSIST</p><h2 id="assistant-title">Clinical assistant</h2></div></div>
+        <button class="assistant-close" id="assistant-close" type="button" aria-label="Close clinical assistant">×</button>
+      </header>
+      <div class="assistant-settings"><label for="assistant-language" id="assistant-language-label">Language</label><select id="assistant-language"><option value="en">English</option><option value="es">Español</option><option value="fr">Français</option><option value="hi">हिन्दी</option><option value="ar">العربية</option></select></div>
+      <p class="assistant-mode" id="assistant-mode">Demo mode · AI service not connected</p>
+      <div class="assistant-messages" id="assistant-messages" role="log" aria-live="polite" aria-relevant="additions"></div>
+      <div class="assistant-suggestions" id="assistant-suggestions" aria-label="Suggested questions"></div>
+      <form class="assistant-form" id="assistant-form">
+        <label class="sr-only" for="assistant-input" id="assistant-input-label">Message</label>
+        <textarea id="assistant-input" rows="2" maxlength="1000" placeholder="Ask about the open demo chart..." required></textarea>
+        <button class="assistant-send" id="assistant-send" type="submit" aria-label="Send message">↑</button>
+      </form>
+      <p class="assistant-disclaimer" id="assistant-disclaimer">Synthetic data only. Not for clinical decisions.</p>
+    </aside>
     <script type="module" src="./ehr-app.js"></script>
   </body>
 </html>

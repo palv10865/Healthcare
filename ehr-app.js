@@ -72,7 +72,29 @@ const tasks = [
 const state = { view: "overview", patientId: null, chartTab: "overview", patientFilter: "", statusFilter: "" };
 const main = document.querySelector("#main-content");
 const noteDialog = document.querySelector("#note-dialog");
+const assistantPanel = document.querySelector("#assistant-panel");
+const assistantForm = document.querySelector("#assistant-form");
+const assistantInput = document.querySelector("#assistant-input");
+const assistantMessages = document.querySelector("#assistant-messages");
+const assistantSuggestions = document.querySelector("#assistant-suggestions");
+const assistantLanguage = document.querySelector("#assistant-language");
+const assistantEndpoint = import.meta.env?.VITE_CLINICAL_ASSISTANT_ENDPOINT || "";
+const assistantState = { messages: [], busy: false };
+const themeToggle = document.querySelector("#theme-toggle");
+const themeToggleLabel = document.querySelector("#theme-toggle-label");
 let toastTimer;
+
+try {
+  if (localStorage.getItem("wellnest-theme") === "classic") document.documentElement.classList.remove("theme-botanical");
+} catch {}
+
+const ASSISTANT_COPY = {
+  en: { language: "Language", demo: "Demo mode · AI service not connected", connected: "Secure assistant endpoint configured", greeting: "I can summarize the open synthetic chart. These demo responses are not clinical advice.", placeholder: "Ask about the open demo chart...", send: "Send message", disclaimer: "Synthetic records only. Not for clinical decisions.", suggestions: ["Summarize this chart", "List allergies", "List medications"], noPatient: "Open a patient chart first. I can only reference the synthetic record currently on screen.", summary: (patient) => `${patient.name}: ${patient.reason}. Allergy record: ${patient.allergies}. Active medication entries: ${patient.medications.map((item) => item.name).join(", ")}. Latest history: ${patient.history[0]?.title || "None"}. Synthetic demo data only.`, allergies: (patient) => `${patient.name} · allergy record: ${patient.allergies}. Verify this information with the patient in a real care setting.`, medications: (patient) => `${patient.name} · medication list: ${patient.medications.map((item) => `${item.name} (${item.detail}, ${item.schedule})`).join("; ")}. Synthetic demo data only.`, unavailable: "The assistant service is unavailable. Try again later.", limited: "I can summarize the open synthetic chart. Connect a secure AI endpoint for open-ended questions." },
+  es: { language: "Idioma", demo: "Modo de demostración · IA no conectada", connected: "Servicio seguro configurado", greeting: "Puedo resumir la historia sintética abierta. Estas respuestas de demostración no son consejos clínicos.", placeholder: "Pregunta sobre la historia de demostración...", send: "Enviar mensaje", disclaimer: "Solo datos sintéticos. No usar para decisiones clínicas.", suggestions: ["Resumir esta historia", "Ver alergias", "Ver medicamentos"], noPatient: "Abre primero una historia clínica. Solo puedo consultar el registro sintético que está en pantalla.", summary: (patient) => `${patient.name}: ${patient.reason}. Alergias registradas: ${patient.allergies}. Medicamentos: ${patient.medications.map((item) => item.name).join(", ")}. Historial reciente: ${patient.history[0]?.title || "Ninguno"}. Solo datos de demostración.`, allergies: (patient) => `${patient.name} · alergias registradas: ${patient.allergies}. Verifica esta información con el paciente en un entorno real.`, medications: (patient) => `${patient.name} · medicamentos: ${patient.medications.map((item) => `${item.name} (${item.detail}, ${item.schedule})`).join("; ")}. Solo datos de demostración.`, unavailable: "El servicio del asistente no está disponible. Inténtalo más tarde.", limited: "Puedo resumir la historia sintética abierta. Conecta un servicio de IA seguro para preguntas abiertas." },
+  fr: { language: "Langue", demo: "Mode démo · IA non connectée", connected: "Service sécurisé configuré", greeting: "Je peux résumer le dossier synthétique ouvert. Ces réponses de démonstration ne sont pas des conseils médicaux.", placeholder: "Question sur le dossier de démonstration...", send: "Envoyer le message", disclaimer: "Données synthétiques uniquement. Pas de décision clinique.", suggestions: ["Résumer ce dossier", "Voir les allergies", "Voir les médicaments"], noPatient: "Ouvrez d’abord un dossier patient. Je peux uniquement consulter le dossier synthétique affiché.", summary: (patient) => `${patient.name} : ${patient.reason}. Allergies enregistrées : ${patient.allergies}. Médicaments : ${patient.medications.map((item) => item.name).join(", ")}. Antécédent récent : ${patient.history[0]?.title || "Aucun"}. Données de démonstration uniquement.`, allergies: (patient) => `${patient.name} · allergies enregistrées : ${patient.allergies}. Vérifiez ces informations avec le patient en situation réelle.`, medications: (patient) => `${patient.name} · médicaments : ${patient.medications.map((item) => `${item.name} (${item.detail}, ${item.schedule})`).join(" ; ")}. Données de démonstration uniquement.`, unavailable: "Le service d’assistance est indisponible. Réessayez plus tard.", limited: "Je peux résumer le dossier synthétique ouvert. Connectez un service d’IA sécurisé pour les questions ouvertes." },
+  hi: { language: "भाषा", demo: "डेमो मोड · AI सेवा कनेक्ट नहीं है", connected: "सुरक्षित सहायक सेवा कॉन्फ़िगर है", greeting: "मैं खुले हुए काल्पनिक रिकॉर्ड का सार दे सकता हूँ। ये डेमो जवाब चिकित्सकीय सलाह नहीं हैं।", placeholder: "डेमो रिकॉर्ड के बारे में पूछें...", send: "संदेश भेजें", disclaimer: "केवल काल्पनिक डेटा। चिकित्सकीय निर्णय के लिए नहीं।", suggestions: ["रिकॉर्ड का सार", "एलर्जी सूची", "दवाओं की सूची"], noPatient: "पहले रोगी का रिकॉर्ड खोलें। मैं केवल स्क्रीन पर मौजूद काल्पनिक रिकॉर्ड देख सकता हूँ।", summary: (patient) => `${patient.name}: ${patient.reason}. दर्ज एलर्जी: ${patient.allergies}. दवाएँ: ${patient.medications.map((item) => item.name).join(", ")}. हाल का इतिहास: ${patient.history[0]?.title || "कोई नहीं"}. केवल डेमो डेटा।`, allergies: (patient) => `${patient.name} · दर्ज एलर्जी: ${patient.allergies}. वास्तविक देखभाल में रोगी से इसकी पुष्टि करें।`, medications: (patient) => `${patient.name} · दवाएँ: ${patient.medications.map((item) => `${item.name} (${item.detail}, ${item.schedule})`).join("; ")}. केवल डेमो डेटा।`, unavailable: "सहायक सेवा उपलब्ध नहीं है। बाद में फिर कोशिश करें।", limited: "मैं खुले हुए काल्पनिक रिकॉर्ड का सार दे सकता हूँ। खुले प्रश्नों के लिए सुरक्षित AI सेवा जोड़ें।" },
+  ar: { language: "اللغة", demo: "وضع تجريبي · خدمة الذكاء الاصطناعي غير متصلة", connected: "تم إعداد نقطة مساعدة آمنة", greeting: "يمكنني تلخيص السجل التجريبي المفتوح. هذه الإجابات التجريبية ليست نصيحة طبية.", placeholder: "اسأل عن السجل التجريبي المفتوح...", send: "إرسال الرسالة", disclaimer: "بيانات تجريبية فقط. ليست لاتخاذ قرارات سريرية.", suggestions: ["لخّص هذا السجل", "اعرض الحساسية", "اعرض الأدوية"], noPatient: "افتح سجل مريض أولاً. يمكنني الرجوع إلى السجل التجريبي الظاهر فقط.", summary: (patient) => `${patient.name}: ${patient.reason}. الحساسية المسجلة: ${patient.allergies}. الأدوية: ${patient.medications.map((item) => item.name).join("، ")}. أحدث سجل: ${patient.history[0]?.title || "لا يوجد"}. بيانات تجريبية فقط.`, allergies: (patient) => `${patient.name} · الحساسية المسجلة: ${patient.allergies}. تحقّق من المعلومات مع المريض في الرعاية الحقيقية.`, medications: (patient) => `${patient.name} · قائمة الأدوية: ${patient.medications.map((item) => `${item.name} (${item.detail}, ${item.schedule})`).join("؛ ")}. بيانات تجريبية فقط.`, unavailable: "خدمة المساعد غير متاحة. حاول مرة أخرى لاحقاً.", limited: "يمكنني تلخيص السجل التجريبي المفتوح. اربط خدمة ذكاء اصطناعي آمنة للأسئلة المفتوحة." },
+};
 
 function escapeHtml(value = "") {
   return String(value).replace(/[&<>"']/g, (character) => ({
@@ -235,6 +257,115 @@ function renderSearchResults(query) {
   return matches;
 }
 
+function currentAssistantCopy() {
+  return ASSISTANT_COPY[assistantLanguage.value] || ASSISTANT_COPY.en;
+}
+
+function appendAssistantMessage(role, text) {
+  const message = document.createElement("div");
+  message.className = `assistant-message ${role}`;
+  message.textContent = text;
+  assistantMessages.append(message);
+  assistantMessages.scrollTop = assistantMessages.scrollHeight;
+}
+
+function applyAssistantLanguage() {
+  const copy = currentAssistantCopy();
+  assistantPanel.lang = assistantLanguage.value;
+  assistantPanel.dir = assistantLanguage.value === "ar" ? "rtl" : "ltr";
+  assistantPanel.dataset.connected = String(Boolean(assistantEndpoint));
+  document.querySelector("#assistant-language-label").textContent = copy.language;
+  document.querySelector("#assistant-mode").textContent = assistantEndpoint ? copy.connected : copy.demo;
+  document.querySelector("#assistant-input-label").textContent = copy.send;
+  document.querySelector("#assistant-disclaimer").textContent = copy.disclaimer;
+  assistantInput.placeholder = copy.placeholder;
+  document.querySelector("#assistant-send").setAttribute("aria-label", copy.send);
+  assistantMessages.replaceChildren();
+  if (assistantState.messages.length) {
+    assistantState.messages.forEach(({ role, text }) => appendAssistantMessage(role, text));
+  } else {
+    appendAssistantMessage("assistant", copy.greeting);
+  }
+  assistantSuggestions.replaceChildren();
+  copy.suggestions.forEach((suggestion) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "assistant-suggestion";
+    button.dataset.assistantPrompt = suggestion;
+    button.textContent = suggestion;
+    assistantSuggestions.append(button);
+  });
+}
+
+function getAssistantDemoReply(message) {
+  const copy = currentAssistantCopy();
+  const patient = getPatient(state.patientId);
+  if (!patient) return copy.noPatient;
+  const normalized = message.toLowerCase();
+  if (/allerg|alerg|аллерг|एलर्जी|حساسية/.test(normalized)) return copy.allergies(patient);
+  if (/medic|drug|medicamento|médicament|दवा|دواء/.test(normalized)) return copy.medications(patient);
+  if (/summar|résum|resum|summary|history|historial|historique|इतिहास|تاريخ/.test(normalized)) return copy.summary(patient);
+  return copy.limited;
+}
+
+function assistantPatientContext() {
+  const patient = getPatient(state.patientId);
+  if (!patient) return null;
+  return {
+    mrn: patient.mrn,
+    name: patient.name,
+    reason: patient.reason,
+    allergies: patient.allergies,
+    medications: patient.medications,
+    recentHistory: patient.history,
+    encounterNote: patient.note,
+  };
+}
+
+async function sendAssistantMessage(value) {
+  const message = value.trim();
+  if (!message || assistantState.busy) return;
+  assistantState.messages.push({ role: "user", text: message });
+  appendAssistantMessage("user", message);
+  assistantInput.value = "";
+  assistantState.busy = true;
+  document.querySelector("#assistant-send").disabled = true;
+  try {
+    let reply;
+    if (assistantEndpoint) {
+      const response = await fetch(assistantEndpoint, {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message, locale: assistantLanguage.value, patient: assistantPatientContext() }),
+      });
+      if (!response.ok) throw new Error("Assistant request failed.");
+      const result = await response.json();
+      if (typeof result.reply !== "string" || !result.reply.trim()) throw new Error("Assistant response was empty.");
+      reply = result.reply.trim();
+    } else {
+      reply = getAssistantDemoReply(message);
+    }
+    assistantState.messages.push({ role: "assistant", text: reply });
+    appendAssistantMessage("assistant", reply);
+  } catch {
+    const reply = currentAssistantCopy().unavailable;
+    assistantState.messages.push({ role: "assistant", text: reply });
+    appendAssistantMessage("assistant", reply);
+  } finally {
+    assistantState.busy = false;
+    document.querySelector("#assistant-send").disabled = false;
+    assistantInput.focus();
+  }
+}
+
+function updateThemeToggle() {
+  const botanical = document.documentElement.classList.contains("theme-botanical");
+  themeToggle.setAttribute("aria-pressed", String(botanical));
+  themeToggle.setAttribute("aria-label", botanical ? "Switch to classic theme" : "Switch to botanical theme");
+  themeToggleLabel.textContent = botanical ? "Botanical" : "Classic";
+}
+
 document.querySelectorAll(".nav-link").forEach((button) => button.addEventListener("click", () => setView(button.dataset.view)));
 document.querySelector("#global-search").addEventListener("input", (event) => renderSearchResults(event.target.value));
 document.querySelector("#global-search").addEventListener("keydown", (event) => {
@@ -338,12 +469,57 @@ noteDialog.addEventListener("click", (event) => {
   if (event.target === noteDialog) noteDialog.close();
 });
 
+themeToggle.addEventListener("click", () => {
+  const botanical = document.documentElement.classList.toggle("theme-botanical");
+  try {
+    localStorage.setItem("wellnest-theme", botanical ? "botanical" : "classic");
+  } catch {}
+  updateThemeToggle();
+});
+
+document.querySelector("#assistant-launch").addEventListener("click", () => {
+  assistantPanel.classList.remove("hidden");
+  assistantPanel.setAttribute("aria-hidden", "false");
+  document.querySelector("#assistant-launch").setAttribute("aria-expanded", "true");
+  assistantInput.focus();
+});
+document.querySelector("#assistant-close").addEventListener("click", () => {
+  assistantPanel.classList.add("hidden");
+  assistantPanel.setAttribute("aria-hidden", "true");
+  document.querySelector("#assistant-launch").setAttribute("aria-expanded", "false");
+  document.querySelector("#assistant-launch").focus();
+});
+assistantLanguage.addEventListener("change", applyAssistantLanguage);
+assistantForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+  sendAssistantMessage(assistantInput.value);
+});
+assistantInput.addEventListener("keydown", (event) => {
+  if (event.key === "Enter" && !event.shiftKey) {
+    event.preventDefault();
+    assistantForm.requestSubmit();
+  }
+});
+assistantSuggestions.addEventListener("click", (event) => {
+  const suggestion = event.target.closest("[data-assistant-prompt]");
+  if (suggestion) sendAssistantMessage(suggestion.dataset.assistantPrompt);
+});
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && !assistantPanel.classList.contains("hidden")) {
+    assistantPanel.classList.add("hidden");
+    assistantPanel.setAttribute("aria-hidden", "true");
+    document.querySelector("#assistant-launch").setAttribute("aria-expanded", "false");
+  }
+});
+
 const manifestLink = document.querySelector('link[rel="manifest"]');
 if (manifestLink && "serviceWorker" in navigator) {
-  const appRoot = new URL(import.meta.env.BASE_URL, window.location.href);
+  const appRoot = new URL("./", window.location.href);
   window.addEventListener("load", () => {
     navigator.serviceWorker.register(new URL("service-worker.js", appRoot)).catch(() => {});
   });
 }
 
+applyAssistantLanguage();
+updateThemeToggle();
 render();
