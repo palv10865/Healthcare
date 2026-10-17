@@ -1,0 +1,181 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function userPath(uid) {
+      return /databases/$(database)/documents/users/$(uid);
+    }
+
+    function providerDirectoryPath(uid) {
+      return /databases/$(database)/documents/providerDirectory/$(uid);
+    }
+
+    function patientPath(patientNumber) {
+      return /databases/$(database)/documents/patients/$(patientNumber);
+    }
+
+    function accessPath(patientNumber, providerUid) {
+      return /databases/$(database)/documents/patients/$(patientNumber)/access/$(providerUid);
+    }
+
+    function isApprovedProvider() {
+      return signedIn()
+        && exists(userPath(request.auth.uid))
+        && get(userPath(request.auth.uid)).data.role == 'provider'
+        && get(userPath(request.auth.uid)).data.providerStatus == 'approved';
+    }
+
+    function ownsPatient(patientNumber) {
+      return signedIn()
+        && exists(patientPath(patientNumber))
+        && get(patientPath(patientNumber)).data.ownerUid == request.auth.uid;
+    }
+
+    function canAccessPatient(patientNumber) {
+      return ownsPatient(patientNumber)
+        || (isApprovedProvider() && exists(accessPath(patientNumber, request.auth.uid)));
+    }
+
+    match /users/{uid} {
+      allow get: if signedIn() && (
+        request.auth.uid == uid
+      );
+      allow list: if false;
+
+      allow create: if signedIn()
+        && request.auth.uid == uid
+        && request.resource.data.uid == uid
+        && request.resource.data.displayName is string
+        && request.resource.data.role in ['patient', 'provider']
+        && (
+          (request.resource.data.role == 'patient'
+            && request.resource.data.patientNumber == ''
+            && request.resource.data.phoneNumber is string
+            && request.resource.data.keys().hasOnly([
+              'uid', 'displayName', 'phoneNumber', 'role', 'patientNumber', 'createdAt'
+            ]))
+          || (request.resource.data.role == 'provider'
+            && request.resource.data.providerStatus == 'pending'
+            && request.resource.data.organization is string
+            && request.resource.data.licenseNumber is string
+            && request.resource.data.phoneNumber is string
+            && request.resource.data.organization.size() > 0
+            && request.resource.data.licenseNumber.size() > 0
+            && request.resource.data.keys().hasOnly([
+              'uid', 'displayName', 'phoneNumber', 'role', 'organization', 'licenseNumber',
+              'providerStatus', 'createdAt'
+            ]))
+        );
+
+      allow update: if signedIn()
+        && request.auth.uid == uid
+        && request.resource.data.uid == resource.data.uid
+        && request.resource.data.role == resource.data.role
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['patientNumber', 'displayName'])
+        && (
+          resource.data.role == 'provider'
+          || request.resource.data.patientNumber == resource.data.patientNumber
+          || (resource.data.role == 'patient'
+            && resource.data.patientNumber == ''
+            && request.resource.data.patientNumber is string
+            && getAfter(patientPath(request.resource.data.patientNumber)).data.ownerUid == uid)
+        );
+    }
+
+    match /providerDirectory/{uid} {
+      allow get: if signedIn() && (
+        request.auth.uid == uid
+        || (resource.data.providerStatus == 'approved')
+      );
+      allow list: if false;
+
+      allow create: if signedIn()
+        && request.auth.uid == uid
+        && getAfter(userPath(uid)).data.role == 'provider'
+        && getAfter(userPath(uid)).data.providerStatus == 'pending'
+        && request.resource.data.providerUid == uid
+        && request.resource.data.displayName == getAfter(userPath(uid)).data.displayName
+        && request.resource.data.organization == getAfter(userPath(uid)).data.organization
+        && request.resource.data.providerStatus == 'pending'
+        && request.resource.data.keys().hasOnly([
+          'providerUid', 'displayName', 'organization', 'providerStatus'
+        ]);
+
+      allow update, delete: if false;
+    }
+
+    match /patients/{patientNumber} {
+      allow get: if canAccessPatient(patientNumber);
+      allow list: if false;
+
+      allow create: if signedIn()
+        && patientNumber.matches('WN-[0-9]{4}-[A-F0-9]{16}')
+        && request.resource.data.ownerUid == request.auth.uid
+        && request.resource.data.patientNumber == patientNumber
+        && getAfter(userPath(request.auth.uid)).data.role == 'patient'
+        && getAfter(userPath(request.auth.uid)).data.patientNumber == patientNumber;
+
+      allow update: if ownsPatient(patientNumber)
+        && request.resource.data.ownerUid == resource.data.ownerUid
+        && request.resource.data.patientNumber == resource.data.patientNumber
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['healthProfile', 'updatedAt']);
+
+      allow delete: if false;
+
+      match /access/{providerUid} {
+        allow get, list: if ownsPatient(patientNumber);
+
+        allow create, update: if ownsPatient(patientNumber)
+          && request.resource.data.providerUid == providerUid
+          && exists(userPath(providerUid))
+          && get(userPath(providerUid)).data.role == 'provider'
+          && get(userPath(providerUid)).data.providerStatus == 'approved'
+          && request.resource.data.providerName is string
+          && request.resource.data.organization is string
+          && request.resource.data.keys().hasOnly([
+            'providerUid', 'providerName', 'organization', 'grantedAt'
+          ]);
+
+        allow delete: if ownsPatient(patientNumber);
+      }
+
+      match /records/{recordId} {
+        allow get, list: if canAccessPatient(patientNumber);
+
+        allow create: if canAccessPatient(patientNumber)
+          && request.resource.data.createdBy == request.auth.uid
+          && request.resource.data.ownerUid == get(patientPath(patientNumber)).data.ownerUid
+          && request.resource.data.title is string
+          && request.resource.data.title.size() > 0
+          && request.resource.data.title.size() <= 120
+          && request.resource.data.type in [
+            'Lab result', 'Imaging', 'Visit summary', 'Prescription',
+            'Vaccination', 'Other'
+          ]
+          && request.resource.data.recordDate is string
+          && request.resource.data.notes is string
+          && request.resource.data.notes.size() <= 2000
+          && request.resource.data.filePath is string
+          && request.resource.data.fileName is string
+          && (
+            (request.resource.data.filePath == '' && request.resource.data.fileName == '')
+            || (request.resource.data.filePath.matches(
+              'records/' + patientNumber + '/' + recordId + '/[^/]+'
+            ) && request.resource.data.fileName.size() > 0)
+          )
+          && request.resource.data.providerName is string
+          && request.resource.data.createdByName is string
+          && request.resource.data.keys().hasOnly([
+            'title', 'type', 'recordDate', 'providerName', 'notes',
+            'filePath', 'fileName', 'ownerUid', 'createdBy',
+            'createdByName', 'createdAt'
+          ]);
+
+        allow update, delete: if false;
+      }
+    }
+  }
+}

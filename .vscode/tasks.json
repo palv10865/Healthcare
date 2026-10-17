@@ -1,0 +1,23 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Wellnest: Start Web Server",
+            "type": "process",
+            "command": "python",
+            "args": ["-m", "http.server", "5173", "--bind", "127.0.0.1"],
+            "isBackground": true,
+            "problemMatcher": {
+                "owner": "vite",
+                "pattern": {
+                    "regexp": ".*"
+                },
+                "background": {
+                    "activeOnStart": true,
+                    "beginsPattern": ".*",
+                    "endsPattern": ".*127\\.0\\.0\\.1:5173.*"
+                }
+            }
+        }
+    ]
+}

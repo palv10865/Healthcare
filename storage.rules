@@ -1,0 +1,36 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    function ownsPatient(patientNumber) {
+      return request.auth != null
+        && firestore.exists(/databases/(default)/documents/patients/$(patientNumber))
+        && firestore.get(/databases/(default)/documents/patients/$(patientNumber)).data.ownerUid == request.auth.uid;
+    }
+
+    function approvedProvider() {
+      return request.auth != null
+        && firestore.exists(/databases/(default)/documents/users/$(request.auth.uid))
+        && firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role == 'provider'
+        && firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.providerStatus == 'approved';
+    }
+
+    function canAccessPatient(patientNumber) {
+      return ownsPatient(patientNumber)
+        || (approvedProvider()
+          && firestore.exists(/databases/(default)/documents/patients/$(patientNumber)/access/$(request.auth.uid)));
+    }
+
+    function allowedFile() {
+      return request.resource.size <= 20 * 1024 * 1024
+        && request.resource.contentType.matches(
+          'application/pdf|application/msword|application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+        );
+    }
+
+    match /records/{patientNumber}/{recordId}/{fileName} {
+      allow read: if canAccessPatient(patientNumber);
+      allow create, update: if canAccessPatient(patientNumber) && allowedFile();
+      allow delete: if ownsPatient(patientNumber);
+    }
+  }
+}

@@ -1,0 +1,62 @@
+<!doctype html>
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#202d2a" />
+    <meta name="description" content="A synthetic-data hospital EHR workflow prototype." />
+    <title>Wellnest Clinical | Hospital EHR Demo</title>
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="icon" href="./icon.svg" type="image/svg+xml" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="./ehr.css" />
+  </head>
+  <body>
+    <div class="ehr-shell">
+      <aside class="rail">
+        <a class="brand" href="./" aria-label="Wellnest Clinical home"><span class="brand-mark">W</span><span>wellnest<span class="brand-dot">.</span><small>CLINICAL</small></span></a>
+        <div class="facility-switch"><span class="facility-symbol">N</span><span><strong>Northline Medical</strong><small>Central campus</small></span><span class="switch-chevron">⌄</span></div>
+        <p class="rail-label">CLINICAL WORKSPACE</p>
+        <nav class="main-nav" aria-label="Clinical workspace">
+          <button class="nav-link active" data-view="overview"><span class="nav-icon">▦</span>Overview</button>
+          <button class="nav-link" data-view="patients"><span class="nav-icon">♙</span>Patients<span class="nav-badge">24</span></button>
+          <button class="nav-link" data-view="schedule"><span class="nav-icon">▦</span>Schedule</button>
+          <button class="nav-link" data-view="orders"><span class="nav-icon">⌁</span>Orders<span class="nav-badge warm">3</span></button>
+        </nav>
+        <div class="rail-bottom">
+          <div class="rail-demo-note"><span>!</span><p><strong>Training environment</strong><br />Synthetic patient data only</p></div>
+          <div class="staff-profile"><span class="staff-avatar">AP</span><span><strong>Dr. Alex Parker</strong><small>Internal medicine</small></span><button aria-label="Staff options">···</button></div>
+        </div>
+      </aside>
+
+      <div class="workspace">
+        <header class="topbar">
+          <div class="crumb"><span>Northline Medical</span><b>/</b><strong id="page-context">Overview</strong></div>
+          <div class="topbar-actions">
+            <div class="global-search-wrap"><label class="global-search"><span>⌕</span><input id="global-search" type="search" placeholder="Find patient by name or MRN" autocomplete="off" aria-label="Find patient by name or medical record number" aria-expanded="false" aria-controls="search-results" /><kbd>⌘ K</kbd></label><div class="search-results hidden" id="search-results" role="listbox"></div></div>
+            <span class="environment-pill"><i></i> DEMO DATA</span>
+            <button class="top-icon" aria-label="Notifications" title="Notifications">♧<span></span></button>
+            <button class="top-avatar" aria-label="Signed in as Dr. Alex Parker">AP</button>
+          </div>
+        </header>
+        <main id="main-content" class="main-content" tabindex="-1"></main>
+        <footer class="page-disclaimer"><span>DEMO ONLY</span> Not connected to a medical record system. Do not enter real patient information.</footer>
+      </div>
+    </div>
+
+    <dialog class="note-dialog" id="note-dialog" aria-labelledby="note-title">
+      <form id="note-form">
+        <div class="dialog-heading"><div><p class="eyebrow">ENCOUNTER NOTE</p><h2 id="note-title">Add clinical note</h2><p id="note-patient"></p></div><button class="close-dialog" type="button" aria-label="Close">×</button></div>
+        <label for="note-text">Assessment and plan</label>
+        <textarea id="note-text" rows="7" maxlength="3000" placeholder="Document the visit in this training simulation..." required></textarea>
+        <p class="field-hint">This note is held in page memory only and will be cleared when you reload.</p>
+        <div class="dialog-actions"><button class="button secondary" type="button" id="cancel-note">Cancel</button><button class="button primary" type="submit">Save note</button></div>
+      </form>
+    </dialog>
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <script type="module" src="./ehr-app.js"></script>
+  </body>
+</html>
