@@ -1,0 +1,8 @@
+{
+  "appId": "com.wellnest.clinical",
+  "appName": "Wellnest Clinical",
+  "webDir": "dist",
+  "server": {
+    "androidScheme": "https"
+  }
+}
