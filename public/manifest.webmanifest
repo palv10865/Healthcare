@@ -1,0 +1,19 @@
+{
+  "name": "Wellnest Clinical Demo",
+  "short_name": "Wellnest",
+  "description": "A synthetic-data hospital EHR workflow prototype.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#f4f5f1",
+  "theme_color": "#202d2a",
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
