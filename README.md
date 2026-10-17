@@ -1,6 +1,6 @@
 # Wellnest Clinical demo
 
-Wellnest Clinical is an installable front-end hospital EHR workflow prototype. It includes a staff overview, synthetic patient queue, searchable patient charts, schedule, mock diagnostic orders, and session-only note and encounter actions. The PWA caches its shell for offline launch after the first visit.
+Wellnest Clinical is an installable front-end hospital EHR workflow prototype. It includes a staff overview, synthetic patient queue, searchable patient charts, schedule, mock diagnostic orders, and session-only note and encounter actions. The PWA caches same-origin assets as they are used and can reopen them offline after a controlled online load.
 
 Run with Vite:
 
